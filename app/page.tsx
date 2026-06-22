@@ -1,65 +1,133 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState } from "react";
+import { getMockIndicators, EconomicIndicator } from "@/lib/api/mockData";
+import { EconomicChart } from "@/components/charts/EconomicChart";
+import { AiChat } from "@/components/chat/AiChat";
+import { Simulator } from "@/components/simulator/Simulator";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import { Activity, Clock } from "lucide-react";
+import { motion } from "framer-motion";
+
+export default function DashboardPage() {
+  const [country, setCountry] = useState("USA");
+  const [indicators, setIndicators] = useState<EconomicIndicator[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const data = await getMockIndicators(country);
+        setIndicators(data);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, [country]);
+
+  // Map indicator IDs to specific chart types and colors for variety
+  const chartConfig = {
+    inflation: { type: "area" as const, color: "#ef4444" }, // red
+    gdp: { type: "bar" as const, color: "#10b981" }, // emerald
+    unemployment: { type: "line" as const, color: "#f59e0b" }, // amber
+    interest: { type: "area" as const, color: "#8b5cf6" }, // violet
+  };
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
+      {/* Top Navbar */}
+      <header className="sticky top-0 z-30 border-b border-border/40 bg-background/80 backdrop-blur-md">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center">
+              <Activity className="w-5 h-5 text-white" />
+            </div>
+            <span className="font-bold text-xl tracking-tight">EconPulse <span className="text-blue-500">AI</span></span>
+          </div>
+          
+          <div className="flex items-center gap-6">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Clock className="w-4 h-4" />
+              <span>Last updated: Just now</span>
+            </div>
+            <Select value={country} onValueChange={setCountry}>
+              <SelectTrigger className="w-[180px] bg-muted/50 border-0">
+                <SelectValue placeholder="Select Country" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="USA">United States</SelectItem>
+                <SelectItem value="IND">India</SelectItem>
+                <SelectItem value="GBR">United Kingdom</SelectItem>
+                <SelectItem value="GLOBAL">Global Average</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Macroeconomic Dashboard</h1>
+          <p className="text-muted-foreground">Real-time indicators and AI-powered insights for {country}.</p>
         </div>
+
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-pulse">
+            {[1, 2, 3, 4].map((i) => (
+              <div key={i} className="h-[350px] bg-muted/20 rounded-xl border border-border/50"></div>
+            ))}
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {indicators.map((indicator, index) => {
+              const config = chartConfig[indicator.id as keyof typeof chartConfig] || { type: "area", color: "#3b82f6" };
+              
+              return (
+                <motion.div
+                  key={indicator.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1, duration: 0.5 }}
+                >
+                  <EconomicChart 
+                    title={indicator.title}
+                    description={indicator.description}
+                    data={indicator.data}
+                    unit={indicator.unit}
+                    type={config.type}
+                    color={config.color}
+                  />
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Simulators */}
+        {!loading && indicators.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5, duration: 0.5 }}
+          >
+            <Simulator indicators={indicators} />
+          </motion.div>
+        )}
       </main>
+      
+      {/* AI Analyst Chat Widget */}
+      <AiChat contextData={indicators} />
     </div>
   );
 }
