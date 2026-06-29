@@ -1,0 +1,9 @@
+Priority,Source,What Data It Has,Best For,Access,Notes
+1,"Bureau of National Statistics
+stat.gov.kz","Inflation (CPI), GDP, Unemployment, Wages, Population, Prices",Most indicators,Free (download Excel/PDF),Main official source
+2,"National Bank of Kazakhstan
+nationalbank.kz","Base Rate (Interest Rate), Inflation expectations, Monetary statistics","Interest Rate, Monetary policy",Free,Very important for your project
+3,"World Bank Data
+data.worldbank.org/country/kazakhstan","Historical GDP, Inflation, Unemployment, etc.",Long-term trends & comparisons,Free + API,Good for charts
+4,IMF Data,"GDP, Inflation, Balance of Payments",Forecasts and international comparison,Free,Useful for projections
+5,Trading Economics,Kazakhstan indicators,Quick overview,Free (limited),Good for reference

@@ -4,64 +4,142 @@ import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, Sparkles, X, MessageSquare } from "lucide-react";
+import { Send, Bot, Sparkles, X, Database } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { COUNTRIES } from "@/lib/api/mockData";
 
 type Message = {
   role: "user" | "ai";
   content: string;
 };
 
-export function AiChat({ contextData }: { contextData: any }) {
+const QUICK_PROMPTS = [
+  "What's the inflation outlook?",
+  "How do interest rates affect me?",
+  "Is GDP growth strong?",
+  "Compare unemployment trends",
+];
+
+export function AiChat({ contextData, country, parentMode = false }: { contextData: any; country: string; parentMode?: boolean }) {
+  const countryInfo = COUNTRIES.find(c => c.code === country);
+  const countryLabel = countryInfo ? `${countryInfo.flag} ${countryInfo.name}` : country;
+
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "ai", content: "Hello! I'm your AI Economic Analyst. Ask me about the current economic data, how inflation impacts you, or any other macroeconomic questions." }
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const scrollRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Message timestamps to implement the sliding rate limiter window (5 RPM limit)
+  const [msgTimestamps, setMsgTimestamps] = useState<number[]>([]);
+  const [cooldown, setCooldown] = useState(0);
+
+  // Reset greeting when country or parentMode changes
+  useEffect(() => {
+    const greeting = parentMode
+      ? `Hello! I'm your Family Finance Adviser, loaded with live economic data for **${countryLabel}**.\n\nI can explain how inflation affects your grocery budget, utility bills, mortgage, or children's education in simple, plain language.`
+      : `Hello! I'm your AI Economic Analyst, loaded with live dashboard data for **${countryLabel}**.\n\nI can see all indicators on your dashboard — inflation, unemployment, GDP, and interest rates. Ask me how these numbers affect your studies, first jobs, or savings!`;
+
+    setMessages([{ role: "ai", content: greeting }]);
+  }, [country, countryLabel, parentMode]);
 
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }
-  }, [messages]);
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
+  }, [messages, isLoading]);
 
-  const handleSend = async () => {
-    if (!input.trim() || isLoading) return;
+  // Handle visual cooldown decrement
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => {
+      setCooldown(c => c - 1);
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
-    const userMessage = input.trim();
+  const handleSend = async (text?: string) => {
+    const userMessage = (text ?? input).trim();
+    if (!userMessage || isLoading || cooldown > 0) return;
     setInput("");
-    setMessages(prev => [...prev, { role: "user", content: userMessage }]);
+
+    const now = Date.now();
+    // Keep only timestamps within the last 60 seconds
+    const activeTimestamps = msgTimestamps.filter(t => now - t < 60000);
+
+    let nextCooldown = 1; // Reduced to 1s for better experience
+    if (activeTimestamps.length >= 6) {
+      const timeToWait = Math.ceil((60000 - (now - activeTimestamps[0])) / 1000);
+      nextCooldown = Math.max(timeToWait, 1);
+    }
+
+    setCooldown(nextCooldown);
+    setMsgTimestamps([...activeTimestamps, now]);
+
+    const newMessages: Message[] = [...messages, { role: "user", content: userMessage }];
+    setMessages(newMessages);
     setIsLoading(true);
 
     try {
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, { role: "user", content: userMessage }],
-          contextData
-        })
+        body: JSON.stringify({ messages: newMessages, contextData, country, parentMode }),
       });
 
-      const data = await response.json();
-      
-      if (response.ok) {
-        setMessages(prev => [...prev, { role: "ai", content: data.message }]);
-      } else {
-        setMessages(prev => [...prev, { role: "ai", content: "Sorry, I encountered an error. Please try again." }]);
+      if (!response.ok) {
+        let errMsg = "Sorry, I encountered an error. Please try again.";
+        try {
+          const contentType = response.headers.get("content-type");
+          if (contentType?.includes("application/json")) {
+            const data = await response.json();
+            errMsg = data.error || errMsg;
+          }
+        } catch (_) {}
+
+        setMessages(prev => [...prev, { role: "ai", content: errMsg }]);
+        setIsLoading(false);
+        return;
       }
-    } catch (error) {
-      setMessages(prev => [...prev, { role: "ai", content: "Failed to connect to the server." }]);
-    } finally {
+
+      const contentType = response.headers.get("content-type");
+      if (contentType?.includes("application/json")) {
+        const data = await response.json();
+        setMessages(prev => [...prev, { role: "ai", content: data.message || data.error }]);
+        setIsLoading(false);
+        return;
+      }
+
+      // Streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let aiResponse = "";
+
+      setMessages(prev => [...prev, { role: "ai", content: "" }]);
+      setIsLoading(false);
+
+      while (reader && !done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        if (value) {
+          aiResponse += decoder.decode(value, { stream: true });
+          setMessages(prev => {
+            const updated = [...prev];
+            updated[updated.length - 1] = { role: "ai", content: aiResponse };
+            return updated;
+          });
+        }
+      }
+    } catch {
+      setMessages(prev => [...prev, { role: "ai", content: "Failed to connect to the AI server." }]);
       setIsLoading(false);
     }
   };
 
   return (
     <>
-      {/* Floating Action Button */}
+      {/* FAB */}
       <AnimatePresence>
         {!isOpen && (
           <motion.button
@@ -69,80 +147,125 @@ export function AiChat({ contextData }: { contextData: any }) {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg shadow-blue-900/20 flex items-center justify-center transition-colors z-40"
+            className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/30 flex items-center justify-center z-40 transition-colors"
+            style={{ boxShadow: "0 0 20px rgba(59,130,246,0.4)" }}
           >
             <Sparkles className="w-6 h-6" />
           </motion.button>
         )}
       </AnimatePresence>
 
-      {/* Chat Sidebar/Panel */}
+      {/* Chat Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ x: 400, opacity: 0 }}
+            initial={{ x: 420, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            exit={{ x: 400, opacity: 0 }}
+            exit={{ x: 420, opacity: 0 }}
             transition={{ type: "spring", bounce: 0, duration: 0.4 }}
-            className="fixed top-0 right-0 h-full w-full sm:w-[400px] bg-background border-l border-border/50 shadow-2xl z-50 flex flex-col"
+            className="fixed top-0 right-0 h-full w-full sm:w-[420px] bg-background border-l border-border/50 shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="h-16 border-b border-border/50 flex items-center justify-between px-4 bg-muted/30">
-              <div className="flex items-center gap-2 text-blue-500 font-semibold">
-                <Bot className="w-5 h-5" />
-                <span>AI Economic Analyst</span>
+            <div className="h-auto border-b border-border/50 flex flex-col px-4 py-3 bg-muted/20 shrink-0">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2 font-semibold text-blue-400">
+                  <Bot className="w-5 h-5" />
+                  <span>AI Economic Analyst</span>
+                </div>
+                <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full -mr-1">
+                  <X className="w-4 h-4" />
+                </Button>
               </div>
-              <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full">
-                <X className="w-5 h-5" />
-              </Button>
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <Database className="w-3 h-3 text-muted-foreground" />
+                <span className="text-xs text-muted-foreground">
+                  Live data: FRED · World Bank · OECD · BLS · Trading Economics
+                </span>
+              </div>
+              <div className="text-xs text-blue-400/80 mt-1 font-medium">
+                Analyzing: {countryLabel}
+              </div>
             </div>
 
             {/* Messages */}
-            <ScrollArea className="flex-1 p-4" ref={scrollRef}>
+            <ScrollArea className="flex-1 p-4">
               <div className="space-y-4">
                 {messages.map((msg, idx) => (
-                  <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-2xl p-3 ${
-                      msg.role === 'user' 
-                        ? 'bg-blue-600 text-white rounded-tr-sm' 
-                        : 'bg-muted/50 border border-border/50 text-foreground rounded-tl-sm'
-                    }`}>
-                      <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
+                  <motion.div
+                    key={idx}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}
+                  >
+                    <div
+                      className={`max-w-[88%] rounded-2xl p-3 text-sm leading-relaxed whitespace-pre-wrap ${
+                        msg.role === "user"
+                          ? "bg-blue-600 text-white rounded-tr-sm"
+                          : "bg-muted/50 border border-border/50 text-foreground rounded-tl-sm"
+                      }`}
+                    >
+                      {msg.content}
                     </div>
-                  </div>
+                  </motion.div>
                 ))}
                 {isLoading && (
                   <div className="flex justify-start">
-                    <div className="bg-muted/50 border border-border/50 rounded-2xl rounded-tl-sm p-4 flex gap-1 items-center">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '0ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '150ms' }} />
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <div className="bg-muted/50 border border-border/50 rounded-2xl rounded-tl-sm p-4 flex gap-1.5 items-center">
+                      {[0, 150, 300].map((delay) => (
+                        <div
+                          key={delay}
+                          className="w-2 h-2 rounded-full bg-blue-400 animate-bounce"
+                          style={{ animationDelay: `${delay}ms` }}
+                        />
+                      ))}
                     </div>
                   </div>
                 )}
+                <div ref={messagesEndRef} />
               </div>
             </ScrollArea>
 
-            {/* Input Form */}
-            <div className="p-4 bg-background border-t border-border/50">
-              <form 
-                onSubmit={(e) => { e.preventDefault(); handleSend(); }}
-                className="flex gap-2"
-              >
-                <Input 
+            {/* Quick Prompts */}
+            <div className="px-4 pb-2 shrink-0">
+              <div className="flex flex-wrap gap-1.5">
+                {QUICK_PROMPTS.map((prompt) => (
+                  <button
+                    key={prompt}
+                    onClick={() => handleSend(prompt)}
+                    disabled={isLoading || cooldown > 0}
+                    className="text-xs px-2.5 py-1 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:border-blue-500/40 hover:bg-blue-500/5 transition-all disabled:opacity-40"
+                  >
+                    {prompt}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Input */}
+            <div className="p-4 pt-2 bg-background border-t border-border/50 shrink-0">
+              <form onSubmit={(e) => { e.preventDefault(); handleSend(); }} className="flex gap-2">
+                <Input
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
-                  placeholder="Ask about the economy..."
-                  className="flex-1 bg-muted/50 border-border/50 focus-visible:ring-blue-500"
-                  disabled={isLoading}
+                  placeholder={
+                    cooldown > 0
+                      ? `Please wait ${cooldown}s...`
+                      : `Ask about ${countryLabel} economy...`
+                  }
+                  className="flex-1 bg-muted/50 border-border/50 focus-visible:ring-blue-500 text-sm"
+                  disabled={isLoading || cooldown > 0}
                 />
-                <Button 
-                  type="submit" 
-                  size="icon" 
-                  disabled={!input.trim() || isLoading}
-                  className="bg-blue-600 hover:bg-blue-700 text-white shrink-0"
+                <Button
+                  type="submit"
+                  size="icon"
+                  disabled={!input.trim() || isLoading || cooldown > 0}
+                  className="bg-blue-600 hover:bg-blue-500 text-white shrink-0 relative"
                 >
-                  <Send className="w-4 h-4" />
+                  {cooldown > 0 ? (
+                    <span className="text-[10px] font-bold">{cooldown}s</span>
+                  ) : (
+                    <Send className="w-4 h-4" />
+                  )}
                 </Button>
               </form>
             </div>

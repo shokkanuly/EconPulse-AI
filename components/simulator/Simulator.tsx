@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,18 @@ export function Simulator({ indicators }: SimulatorProps) {
   const [impactResult, setImpactResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    const savedIncome = localStorage.getItem("econpulse_income");
+    const savedExpenses = localStorage.getItem("econpulse_expenses");
+    if (savedIncome) setIncome(savedIncome);
+    if (savedExpenses) setExpenses(savedExpenses);
+  }, []);
+
+  useEffect(() => {
+    localStorage.setItem("econpulse_income", income);
+    localStorage.setItem("econpulse_expenses", expenses);
+  }, [income, expenses]);
+
   // Helper to find latest value
   const getLatest = (id: string) => {
     const data = indicators.find(i => i.id === id)?.data;
@@ -41,11 +53,17 @@ export function Simulator({ indicators }: SimulatorProps) {
       const expensesNum = Number(expenses);
       
       const newInflation = currentInflation + inflationDelta[0];
-      const newInterest = currentInterest + interestDelta[0];
       
-      // Basic heuristic for hackathon demo
-      const expenseIncrease = expensesNum * (newInflation / 100);
-      const mortgageImpact = (expensesNum * 0.4) * (newInterest / 100); // assume 40% of expenses is mortgage/debt
+      // Advanced heuristic logic
+      // Assuming 60% of expenses are goods/services affected by inflation
+      const variableExpenses = expensesNum * 0.6;
+      // Assuming 40% of expenses are debt service (mortgage, loans)
+      const debtExpenses = expensesNum * 0.4;
+      // Assume 50% of debt is variable rate (affected directly by interest rate changes)
+      const variableDebtExpenses = debtExpenses * 0.5;
+
+      const expenseIncrease = variableExpenses * (newInflation / 100);
+      const mortgageImpact = variableDebtExpenses * (interestDelta[0] / 100); 
       
       const newExpenses = expensesNum + expenseIncrease + mortgageImpact;
       const newSavings = incomeNum - newExpenses;
@@ -89,7 +107,7 @@ export function Simulator({ indicators }: SimulatorProps) {
                 </div>
                 <Slider 
                   defaultValue={[0]} max={10} min={-10} step={0.5} 
-                  value={inflationDelta} onValueChange={setInflationDelta} 
+                  value={inflationDelta} onValueChange={(val) => setInflationDelta(Array.isArray(val) ? [...val] : [val])} 
                 />
                 <p className="text-xs text-muted-foreground">
                   Simulated Inflation: <span className="text-foreground font-semibold">{(currentInflation + inflationDelta[0]).toFixed(1)}%</span> (Current: {currentInflation}%)
@@ -105,7 +123,7 @@ export function Simulator({ indicators }: SimulatorProps) {
                 </div>
                 <Slider 
                   defaultValue={[0]} max={5} min={-5} step={0.25} 
-                  value={interestDelta} onValueChange={setInterestDelta} 
+                  value={interestDelta} onValueChange={(val) => setInterestDelta(Array.isArray(val) ? [...val] : [val])} 
                 />
                 <p className="text-xs text-muted-foreground">
                   Simulated Interest: <span className="text-foreground font-semibold">{(currentInterest + interestDelta[0]).toFixed(2)}%</span> (Current: {currentInterest}%)
