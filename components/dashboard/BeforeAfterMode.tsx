@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
 import { EconomicIndicator } from "@/lib/api/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Activity, Landmark, ArrowRight, TrendingUp, TrendingDown, RefreshCw, Sparkles, HelpCircle, ShieldAlert, Play, Pause, Loader2 } from "lucide-react";
@@ -140,10 +141,10 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
     }
   };
 
-  // Trigger advice fetch on change (debounced slightly or triggered directly)
+  // Clear advice when scenario changes so they can run analysis on the new shock
   useEffect(() => {
-    fetchAdvice(selectedScenarioId, context);
-  }, [selectedScenarioId, context, userProfile]);
+    setAdvice(null);
+  }, [selectedScenarioId]);
 
   // Auto-cycle timer interval (ticks every 200ms)
   useEffect(() => {
@@ -450,9 +451,21 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground italic">
-                  {adviceLoading ? "Analyzing your budget data with Gemini..." : "Describe your family variables in the text area above to receive custom preparation tips."}
-                </p>
+                <div className="space-y-3">
+                  <p className="text-xs text-muted-foreground italic">
+                    {adviceLoading 
+                      ? "Analyzing your budget data with Gemini..." 
+                      : "Describe your family variables in the text area above and click below to analyze."}
+                  </p>
+                  {!adviceLoading && (
+                    <Button
+                      onClick={() => fetchAdvice(selectedScenarioId, context)}
+                      className="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-semibold py-2 rounded-lg cursor-pointer transition-all"
+                    >
+                      Analyze Shock with AI
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
           </CardContent>
