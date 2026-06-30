@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { EconomicIndicator } from "@/lib/api/mockData";
 import { Sparkles, Calendar, BookOpen, AlertCircle, ShoppingCart, CreditCard, PiggyBank, Mail, Printer, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/lib/LanguageContext";
 
 interface WeeklyReportProps {
   indicators: EconomicIndicator[];
@@ -17,6 +18,7 @@ interface WeeklyReportProps {
 }
 
 export function WeeklyReport({ indicators, country, parentMode, userProfile }: WeeklyReportProps) {
+  const { t, language } = useTranslation();
   const [report, setReport] = useState<any>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -41,7 +43,7 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
       const res = await fetch("/api/weekly-report", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ country, indicators, parentMode, userProfile }),
+        body: JSON.stringify({ country, indicators, parentMode, userProfile, language }),
       });
 
       if (!res.ok) throw new Error("Failed to load report");
@@ -50,8 +52,9 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
       localStorage.setItem("econpulse_weekly_report", JSON.stringify(data));
     } catch (err) {
       setError("Unable to connect to Gemini AI. Showing offline recommendation.");
-      const mockResult = {
-        title: country === 'KAZ' ? "Tenge Stability & Your Allowance Strategy" : "EconPulse Weekly Digest",
+      
+      let mockResult = {
+        title: "EconPulse Weekly Digest",
         marketPulse: "Inflation remains elevated under base rate parameters, requiring careful budget allocation.",
         groceryImpact: parentMode 
           ? "Bread, milk, and utility prices are rising by 8-10% annually. Plan bulk purchases."
@@ -59,11 +62,44 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
         creditImpact: parentMode
           ? "Avoid consumer credit or installment plans for non-essential items right now."
           : "Limit credit purchases and prioritize saving in High-yield accounts.",
-        savingsAdvice: " Tenge deposits at local banks offer excellent returns of up to 14.75% to offset inflation.",
+        savingsAdvice: "Tenge deposits at local banks offer excellent returns of up to 14.75% to offset inflation.",
         actionItem: parentMode
           ? "Review heating and electricity usage this week to cut down utility leaks."
           : "Audit subscription streaming platforms and disable one to save 3,000 ₸."
       };
+
+      if (language === 'kk') {
+        mockResult = {
+          title: "EconPulse апталық бюллетені",
+          marketPulse: "Базалық мөлшерлеме жағдайында инфляция деңгейі жоғары болып қалуда, бюджетті мұқият бөлу қажет.",
+          groceryImpact: parentMode 
+            ? "Нан, сүт және коммуналдық қызметтер бағасы жылына 8-10% өсуде. Жаппай сатып алуды жоспарлаңыз."
+            : "Дайын тамақ, сусындар және буфет шығындары сәл өсті. Мүмкіндігінше түскі асты өзіңізбен бірге алыңыз.",
+          creditImpact: parentMode
+            ? "Дәл қазір маңызды емес тауарлар үшін тұтынушылық несиелерден немесе бөліп төлеуден аулақ болыңыз."
+            : "Несиелік сатып алуларды шектеңіз және жоғары кірісті шоттарда жинақтауға басымдық беріңіз.",
+          savingsAdvice: "Жергілікті банктердегі теңгелік депозиттер инфляцияны өтеу үшін 14.75%-ға дейін тамаша табыс ұсынады.",
+          actionItem: parentMode
+            ? "Осы аптада коммуналдық шығындарды азайту үшін жылу мен электр энергиясын пайдалануды тексеріңіз."
+            : "Жазылымдық ағындық платформаларды тексеріп, 3 000 ₸ үнемдеу үшін біреуін өшіріңіз."
+        };
+      } else if (language === 'ru') {
+        mockResult = {
+          title: "Еженедельный бюллетень EconPulse",
+          marketPulse: "Инфляция остается повышенной в условиях текущей базовой ставки, требуется тщательное распределение бюджета.",
+          groceryImpact: parentMode 
+            ? "Цены на хлеб, молоко и коммунальные услуги растут на 8-10% в год. Планируйте оптовые закупки."
+            : "Расходы на фастфуд, напитки и столовую немного выросли. По возможности берите обеды с собой.",
+          creditImpact: parentMode
+            ? "Избегайте потребительских кредитов или рассрочек на второстепенные товары прямо сейчас."
+            : "Ограничьте покупки в кредит и отдайте приоритет сбережениям на высокодоходных счетах.",
+          savingsAdvice: "Депозиты в тенге в местных банках предлагают отличную доходность до 14.75% для компенсации инфляции.",
+          actionItem: parentMode
+            ? "На этой неделе проверьте использование отопления и электроэнергии, чтобы сократить расходы."
+            : "Проверьте подписки на стриминговые платформы и отключите одну, чтобы сэкономить 3 000 ₸."
+        };
+      }
+
       setReport(mockResult);
     } finally {
       setLoading(false);
@@ -93,31 +129,31 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2 text-blue-400">
               <Calendar className="w-5 h-5" />
-              Weekly Briefing Setup
+              {t("weekly.title")}
             </CardTitle>
             <CardDescription>
-              Compile the latest economic intelligence report tailored to your current profile.
+              {t("weekly.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6 flex-1 flex flex-col justify-between">
             <div className="space-y-4">
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Our AI synthesizes the current published rates (inflation, base interest, and city pricing) into a simple, high-impact digest.
+                {t("weekly.textBrief")}
               </p>
               <Button
                 onClick={generateReport}
                 disabled={loading}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 rounded-xl transition-all shadow-lg shadow-blue-600/20"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 rounded-xl transition-all shadow-lg shadow-blue-600/20 cursor-pointer text-xs sm:text-sm"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                    Compiling Report...
+                    {t("weekly.statusCompiling")}
                   </>
                 ) : (
                   <>
                     <Sparkles className="w-4 h-4 mr-2" />
-                    Compile Weekly Report
+                    {t("weekly.buttonCompile")}
                   </>
                 )}
               </Button>
@@ -128,24 +164,24 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
               <form onSubmit={handleSubscribe} className="space-y-3">
                 <Label className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
                   <Mail className="w-3.5 h-3.5" />
-                  Subscribe to Weekly Digest
+                  {t("weekly.labelSubscribe")}
                 </Label>
                 <div className="flex gap-2">
                   <Input
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder={t("weekly.placeholderEmail")}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
                     className="bg-muted/40 border-border/60 text-xs py-5 rounded-lg flex-1"
                   />
-                  <Button type="submit" className="bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/40 text-xs px-3">
-                    Subscribe
+                  <Button type="submit" className="bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/40 text-xs px-3 cursor-pointer">
+                    {t("weekly.buttonSubscribe")}
                   </Button>
                 </div>
                 {subscribed && (
                   <p className="text-[10px] text-emerald-400 animate-fadeIn">
-                    ✓ Subscribed! You will receive economic briefs every Monday morning.
+                    {t("weekly.textSubscribed")}
                   </p>
                 )}
               </form>
@@ -171,7 +207,7 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
                   <div>
                     <span className="text-[10px] text-blue-400 font-bold uppercase tracking-wider flex items-center gap-1">
                       <BookOpen className="w-3 h-3" />
-                      EconPulse Intelligence Briefing
+                      {t("weekly.reportHeader")}
                     </span>
                     <CardTitle className="text-xl font-bold text-foreground mt-1">
                       {report.title}
@@ -179,18 +215,18 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
                   </div>
                   <Button
                     onClick={handlePrint}
-                    className="bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1.5 py-1 px-3 rounded-lg border border-border/50 shrink-0"
+                    className="bg-muted/40 hover:bg-muted/70 text-muted-foreground hover:text-foreground text-xs flex items-center gap-1.5 py-1 px-3 rounded-lg border border-border/50 shrink-0 cursor-pointer"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    Print / Save PDF
+                    {t("weekly.buttonPrint")}
                   </Button>
                 </CardHeader>
                 <CardContent className="pt-6 space-y-6">
                   {/* General Pulse */}
                   <div className="bg-blue-950/10 border border-blue-500/20 rounded-2xl p-4">
-                    <h4 className="font-semibold text-sm text-blue-300 flex items-center gap-1.5 mb-1.5">
+                    <h4 className="font-semibold text-xs sm:text-sm text-blue-300 flex items-center gap-1.5 mb-1.5">
                       <AlertCircle className="w-4 h-4 text-blue-400" />
-                      Market Pulse This Week
+                      {t("weekly.sectionPulse")}
                     </h4>
                     <p className="text-xs text-muted-foreground leading-relaxed">
                       {report.marketPulse}
@@ -204,7 +240,7 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
                       <div className="space-y-1.5">
                         <h5 className="font-bold text-xs text-amber-400 flex items-center gap-1.5">
                           <ShoppingCart className="w-3.5 h-3.5" />
-                          Groceries & Purchases
+                          {t("weekly.sectionGrocery")}
                         </h5>
                         <p className="text-[11px] text-muted-foreground leading-relaxed">
                           {report.groceryImpact}
@@ -217,7 +253,7 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
                       <div className="space-y-1.5">
                         <h5 className="font-bold text-xs text-purple-400 flex items-center gap-1.5">
                           <CreditCard className="w-3.5 h-3.5" />
-                          Loans & Credit Cards
+                          {t("weekly.sectionCredit")}
                         </h5>
                         <p className="text-[11px] text-muted-foreground leading-relaxed">
                           {report.creditImpact}
@@ -230,7 +266,7 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
                       <div className="space-y-1.5">
                         <h5 className="font-bold text-xs text-emerald-400 flex items-center gap-1.5">
                           <PiggyBank className="w-3.5 h-3.5" />
-                          Savings Strategy
+                          {t("weekly.sectionSavings")}
                         </h5>
                         <p className="text-[11px] text-muted-foreground leading-relaxed">
                           {report.savingsAdvice}
@@ -246,7 +282,7 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
                     </div>
                     <div>
                       <h4 className="font-bold text-xs text-emerald-400 uppercase tracking-wider mb-0.5">
-                        Action Item of the Week
+                        {t("weekly.sectionAction")}
                       </h4>
                       <p className="text-xs text-muted-foreground leading-relaxed">
                         {report.actionItem}
@@ -266,9 +302,9 @@ export function WeeklyReport({ indicators, country, parentMode, userProfile }: W
               <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 text-blue-400">
                 <Calendar className="w-6 h-6 animate-pulse" />
               </div>
-              <h3 className="font-semibold text-lg mb-1">Your weekly briefing is empty</h3>
+              <h3 className="font-semibold text-lg mb-1">{t("weekly.placeholderTitle")}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Compile your customized digest to understand this week's macroeconomic shifts and receive direct pocket-money action steps.
+                {t("weekly.placeholderDesc")}
               </p>
             </motion.div>
           )}

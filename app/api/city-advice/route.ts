@@ -3,11 +3,14 @@ import { getGeminiClient } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
-    const { cityA, cityB, salaryA, salaryB, basketA, basketB, disposableA, disposableB, priceDetails, userContext } = await req.json();
+    const { cityA, cityB, salaryA, salaryB, basketA, basketB, disposableA, disposableB, priceDetails, userContext, language } = await req.json();
     const client = getGeminiClient();
 
+    const langName = language === 'kk' ? 'Kazakh' : language === 'ru' ? 'Russian' : 'English';
     const prompt = `You are EconPulse AI — an expert cost of living and relocation analyst.
 Analyze a potential relocation or cost comparison between two cities in Kazakhstan:
+
+You MUST write all values in the JSON response in ${langName}.
 
 CITY COMPARISON:
 - City A (Base): ${cityA} (Salary: ${salaryA} KZT, Basket Cost: ${basketA} KZT, Net Disposable: ${disposableA} KZT)
@@ -33,6 +36,30 @@ Ensure the analysis is highly clear, numbers-based, and avoids financial jargon.
       await new Promise(resolve => setTimeout(resolve, 800));
       const diff = disposableB - disposableA;
       
+      if (language === 'kk') {
+        return NextResponse.json({
+          analysis: `${cityB} қаласындағы жалдау және коммуналдық қызмет шығындары ірі мегаполистерге тән. Тұтыну себеттерін салыстыру сүт, нан және бензин сияқты күнделікті тауарлар бағасындағы айырмашылықтарды көрсетеді.`,
+          disposableIncomeOutlook: `${cityB} қаласына көшу сізге айына ${diff.toLocaleString()} теңге бос сбережения айырмашылығын береді. ${
+            diff > 0 
+              ? `Бұл сізге жинақтау қабілетін арттыратын жақсы қаржылық мүмкіндікті ұсынады.` 
+              : `Бұл сіздің бос қаражатыңыздың азаюына әкеледі, сондықтан көшуді негіздеу үшін жоғарырақ жалақы талап етуіңіз керек.`
+          }`,
+          savingsTip: `Есіңізде болсын, пәтер жалдау шығындардың ең үлкен бөлігін құрайды. Шығындарды азайту үшін пәтерді бірге жалдау немесе қашықтан жұмыс істеу күндерін қарастырыңыз.`
+        });
+      }
+
+      if (language === 'ru') {
+        return NextResponse.json({
+          analysis: `Расходы на аренду и коммунальные услуги в ${cityB} соответствуют стандартам мегаполиса. Сравнение потребительских корзин показывает различия в стоимости продуктов первой необходимости, таких как молоко и хлеб.`,
+          disposableIncomeOutlook: `Переезд в ${cityB} дает чистую разницу в размере ${diff.toLocaleString()} тенге в месяц. ${
+            diff > 0 
+              ? `Это представляет собой положительную финансовую возможность, увеличивая ваши накопления.` 
+              : `Это приведет к уменьшению свободных сбережений, поэтому вам следует договориться о более высокой зарплате для переезда.`
+          }`,
+          savingsTip: `Учтите, что расходы на аренду составляют наибольшую часть трат. Попробуйте рассмотреть варианты совместной аренды или договориться об удаленных днях работы.`
+        });
+      }
+
       return NextResponse.json({
         analysis: `Rent and utilities in ${cityB} are typical of major metropolitan standards. Comparing basket costs shows that transit and basic staples like bread and milk differ between the two cities.`,
         disposableIncomeOutlook: `Moving to ${cityB} yields a net difference of ${diff.toLocaleString()} KZT in monthly disposable income. ${

@@ -8,6 +8,7 @@ import { EconomicIndicator } from "@/lib/api/mockData";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Activity, Landmark, ArrowRight, TrendingUp, TrendingDown, RefreshCw, Sparkles, HelpCircle, ShieldAlert, Play, Pause, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/lib/LanguageContext";
 
 interface BeforeAfterModeProps {
   indicators: EconomicIndicator[];
@@ -87,6 +88,7 @@ const SCENARIOS: ScenarioConfig[] = [
 ];
 
 export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProfile }: BeforeAfterModeProps) {
+  const { t, language } = useTranslation();
   const [selectedScenarioId, setSelectedScenarioId] = useState<ShockScenario>("rate-hike");
   
   // Timer & progress states for auto-cycling scenarios every 20 seconds
@@ -113,6 +115,19 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
     }
   }, [userProfile]);
 
+  const localizedScenarios = useMemo(() => {
+    return SCENARIOS.map((sc) => ({
+      ...sc,
+      title: t(`simulator.scenarios.${sc.id}.title`) || sc.title,
+      description: t(`simulator.scenarios.${sc.id}.desc`) || sc.description,
+      transmission: t(`simulator.scenarios.${sc.id}.transmission`) || sc.transmission,
+    }));
+  }, [t]);
+
+  const scenario = useMemo(() => {
+    return localizedScenarios.find(s => s.id === selectedScenarioId)!;
+  }, [selectedScenarioId, localizedScenarios]);
+
   // Fetch advice when scenario or context changes
   const fetchAdvice = async (scenarioId: string, currentContext: string) => {
     setAdviceLoading(true);
@@ -128,7 +143,8 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             age: "18",
             city: "Almaty",
             income: "80000"
-          }
+          },
+          language
         })
       });
       if (res.ok) {
@@ -168,9 +184,6 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
     return () => clearInterval(interval);
   }, [isPlaying]);
 
-  const scenario = useMemo(() => {
-    return SCENARIOS.find((s) => s.id === selectedScenarioId)!;
-  }, [selectedScenarioId]);
 
   // Helper to extract baseline indicator currentValue
   const getBaseValue = (id: string) => {
@@ -199,14 +212,17 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
     };
   }, [cpiBase, gdpBase, unempBase, interestBase, confBase, scenario]);
 
+  const beforeKey = t("simulator.before");
+  const afterKey = t("simulator.after");
+
   const comparisonData = useMemo(() => {
     return [
-      { name: "Inflation (%)", Before: cpiBase, After: simulated.inflation },
-      { name: "GDP Growth (%)", Before: gdpBase, After: simulated.gdp },
-      { name: "Unemployment (%)", Before: unempBase, After: simulated.unemployment },
-      { name: "Interest Rate (%)", Before: interestBase, After: simulated.interest },
+      { name: t("simulator.cpi"), [beforeKey]: cpiBase, [afterKey]: simulated.inflation },
+      { name: t("simulator.gdp"), [beforeKey]: gdpBase, [afterKey]: simulated.gdp },
+      { name: t("simulator.unemployment"), [beforeKey]: unempBase, [afterKey]: simulated.unemployment },
+      { name: t("simulator.interest"), [beforeKey]: interestBase, [afterKey]: simulated.interest },
     ];
-  }, [cpiBase, gdpBase, unempBase, interestBase, simulated]);
+  }, [cpiBase, gdpBase, unempBase, interestBase, simulated, beforeKey, afterKey, t]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -217,17 +233,17 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             <div className="flex items-center justify-between">
               <CardTitle className="text-xl flex items-center gap-2 text-blue-400">
                 <Landmark className="w-5 h-5" />
-                Economic Shock Simulator
+                {t("simulator.title")}
               </CardTitle>
               <button 
                 onClick={() => setIsPlaying(!isPlaying)}
-                className="text-muted-foreground hover:text-blue-400 transition-colors"
+                className="text-muted-foreground hover:text-blue-400 transition-colors cursor-pointer"
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5" />}
               </button>
             </div>
-            <CardDescription className="pt-2">
-              Select a major fiscal or monetary event and observe how it flows through the macroeconomic indicators.
+            <CardDescription className="pt-2 text-xs sm:text-sm">
+              {t("simulator.desc")}
             </CardDescription>
             {/* Auto-rotation Progress indicator */}
             {isPlaying && (
@@ -244,15 +260,15 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
           <CardContent className="space-y-6 flex-1 flex flex-col justify-between">
             {/* Pickers list */}
             <div className="space-y-2">
-              <Label>Select Scenario</Label>
+              <Label>{t("simulator.labelScenario")}</Label>
               <div className="grid grid-cols-1 gap-2">
-                {SCENARIOS.map((sc) => {
+                {localizedScenarios.map((sc) => {
                   const isSelected = sc.id === selectedScenarioId;
                   return (
                     <button
                       key={sc.id}
                       onClick={() => setSelectedScenarioId(sc.id)}
-                      className={`flex items-start gap-3 p-3.5 rounded-xl border text-left text-sm transition-all ${
+                      className={`flex items-start gap-3 p-3.5 rounded-xl border text-left text-xs sm:text-sm transition-all cursor-pointer ${
                         isSelected
                           ? "bg-blue-600/10 border-blue-500/50 text-blue-300 font-semibold"
                           : "bg-muted/10 border-border/40 hover:bg-muted/20 text-muted-foreground hover:text-foreground"
@@ -275,7 +291,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             <div className="border border-border/50 bg-muted/10 rounded-2xl p-4 mt-4 space-y-2 text-xs">
               <div className="font-semibold text-sm text-blue-400 flex items-center gap-1.5">
                 <HelpCircle className="w-4 h-4" />
-                Transmission Explainer
+                {t("simulator.labelTransmission")}
               </div>
               <p className="text-muted-foreground leading-relaxed text-[11px]">
                 {scenario.transmission}
@@ -292,14 +308,14 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             <CardTitle className="text-xl flex items-center justify-between">
               <span className="flex items-center gap-2 text-blue-400">
                 <Activity className="w-5 h-5" />
-                Before vs After Comparison
+                {t("simulator.titleComp")}
               </span>
               <span className="text-xs bg-blue-500/10 border border-blue-500/25 px-2.5 py-1 rounded-full text-blue-300 font-medium">
-                Scenario: {scenario.title.split(" (")[0]}
+                {t("simulator.labelScenario")}: {scenario.title.split(" (")[0]}
               </span>
             </CardTitle>
-            <CardDescription>
-              Comparing baseline indicators against simulated adjustments under the shock.
+            <CardDescription className="text-xs sm:text-sm">
+              {t("simulator.descComp")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -307,7 +323,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {/* Inflation */}
               <div className="bg-muted/20 border border-border/30 rounded-xl p-3 flex flex-col justify-between">
-                <div className="text-[10px] text-muted-foreground truncate font-medium">CPI Inflation</div>
+                <div className="text-[10px] text-muted-foreground truncate font-medium">{t("simulator.cpi").split(" ")[0]}</div>
                 <div className="flex items-center gap-1 mt-1.5 justify-between">
                   <span className="text-sm font-semibold line-through text-muted-foreground/50">{cpiBase}%</span>
                   <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
@@ -321,7 +337,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
 
               {/* GDP */}
               <div className="bg-muted/20 border border-border/30 rounded-xl p-3 flex flex-col justify-between">
-                <div className="text-[10px] text-muted-foreground truncate font-medium">GDP Growth</div>
+                <div className="text-[10px] text-muted-foreground truncate font-medium">{t("simulator.gdp").split(" ")[0]}</div>
                 <div className="flex items-center gap-1 mt-1.5 justify-between">
                   <span className="text-sm font-semibold line-through text-muted-foreground/50">{gdpBase}%</span>
                   <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
@@ -335,7 +351,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
 
               {/* Unemployment */}
               <div className="bg-muted/20 border border-border/30 rounded-xl p-3 flex flex-col justify-between">
-                <div className="text-[10px] text-muted-foreground truncate font-medium">Unemployment</div>
+                <div className="text-[10px] text-muted-foreground truncate font-medium">{t("simulator.unemployment").split(" ")[0]}</div>
                 <div className="flex items-center gap-1 mt-1.5 justify-between">
                   <span className="text-sm font-semibold line-through text-muted-foreground/50">{unempBase}%</span>
                   <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
@@ -349,7 +365,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
 
               {/* Interest Rate */}
               <div className="bg-muted/20 border border-border/30 rounded-xl p-3 flex flex-col justify-between">
-                <div className="text-[10px] text-muted-foreground truncate font-medium">Interest Rate</div>
+                <div className="text-[10px] text-muted-foreground truncate font-medium">{t("simulator.interest").split(" ")[0]}</div>
                 <div className="flex items-center gap-1 mt-1.5 justify-between">
                   <span className="text-sm font-semibold line-through text-muted-foreground/50">{interestBase}%</span>
                   <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
@@ -363,7 +379,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
 
               {/* Consumer Confidence */}
               <div className="bg-muted/20 border border-border/30 rounded-xl p-3 flex flex-col justify-between">
-                <div className="text-[10px] text-muted-foreground truncate font-medium">Confidence</div>
+                <div className="text-[10px] text-muted-foreground truncate font-medium">{t("simulator.confidence")}</div>
                 <div className="flex items-center gap-1 mt-1.5 justify-between">
                   <span className="text-sm font-semibold line-through text-muted-foreground/50">{confBase.toFixed(0)}</span>
                   <ArrowRight className="w-3 h-3 text-muted-foreground/40" />
@@ -379,17 +395,17 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             {/* Comparison Charts */}
             <div className="h-[280px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <BarChart data={comparisonData} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" />
-                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={11} />
-                  <YAxis stroke="var(--muted-foreground)" fontSize={11} tickFormatter={(v) => `${v}%`} />
+                  <XAxis dataKey="name" stroke="var(--muted-foreground)" fontSize={10} />
+                  <YAxis stroke="var(--muted-foreground)" fontSize={10} tickFormatter={(v) => `${v}%`} />
                   <Tooltip
                     contentStyle={{ backgroundColor: "oklch(0.205 0 0)", borderColor: "rgba(255,255,255,0.1)", borderRadius: "12px", fontSize: "11px" }}
                     formatter={(value) => [`${value}%`]}
                   />
-                  <Legend wrapperStyle={{ fontSize: "11px" }} />
-                  <Bar dataKey="Before" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-                  <Bar dataKey="After" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <Legend wrapperStyle={{ fontSize: "10px" }} />
+                  <Bar dataKey={beforeKey} fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey={afterKey} fill="#ef4444" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -401,17 +417,17 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
           <CardHeader>
             <CardTitle className="text-lg flex items-center gap-2 text-blue-400">
               <Sparkles className="w-5 h-5" />
-              Personal Simulator Context Board
+              {t("simulator.titleContextBoard")}
             </CardTitle>
             <CardDescription>
-              Describe your active loans, variable rate contracts, or shopping budgets to receive customized AI preparation tips.
+              {t("simulator.descContextBoard")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <textarea
               id="sim-context"
               rows={3}
-              placeholder="e.g. My family has a variable-rate tenge mortgage of 15 million. I am planning to buy a smartphone next month."
+              placeholder={t("simulator.placeholderContextBoard")}
               value={context}
               onChange={(e) => {
                 setContext(e.target.value);
@@ -425,20 +441,20 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
             <div className="rounded-xl border border-border/50 bg-muted/10 p-4 space-y-3">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-blue-400 animate-pulse" />
-                <span className="text-sm font-semibold text-blue-400">AI Personal Impact Analysis</span>
+                <span className="text-sm font-semibold text-blue-400">{t("simulator.titleAiAnalysis")}</span>
                 {adviceLoading && <Loader2 className="w-3.5 h-3.5 animate-spin text-muted-foreground ml-auto" />}
               </div>
               
               {advice ? (
                 <div className="space-y-2">
                   <div className="flex items-center gap-1.5 text-xs">
-                    <span className="text-muted-foreground">Impact Rating:</span>
+                    <span className="text-muted-foreground">{t("simulator.labelImpactRating")}:</span>
                     <span className={`px-2 py-0.5 rounded-full font-semibold ${
                       advice.impactRating === "Positive" ? "bg-emerald-500/10 text-emerald-400" :
                       advice.impactRating === "Negative" ? "bg-red-500/10 text-red-400" :
                       "bg-amber-500/10 text-amber-400"
                     }`}>
-                      {advice.impactRating}
+                      {advice.impactRating === "Positive" ? t("simulator.ratingPositive") : advice.impactRating === "Negative" ? t("simulator.ratingNegative") : t("simulator.ratingNeutral")}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-wrap">
@@ -446,7 +462,7 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
                   </p>
                   {advice.actionTip && (
                     <div className="text-[11px] text-blue-300 bg-blue-500/5 border border-blue-500/10 rounded-lg p-2.5 mt-2">
-                      <span className="font-bold">Preparation Tip:</span> {advice.actionTip}
+                      <span className="font-bold">{t("simulator.textPrepTip")}:</span> {advice.actionTip}
                     </div>
                   )}
                 </div>
@@ -454,15 +470,15 @@ export function BeforeAfterMode({ indicators, country, userProfile, onUpdateProf
                 <div className="space-y-3">
                   <p className="text-xs text-muted-foreground italic">
                     {adviceLoading 
-                      ? "Analyzing your budget data with Gemini..." 
-                      : "Describe your family variables in the text area above and click below to analyze."}
+                      ? t("simulator.statusAnalyzing")
+                      : t("simulator.textFillContext")}
                   </p>
                   {!adviceLoading && (
                     <Button
                       onClick={() => fetchAdvice(selectedScenarioId, context)}
                       className="w-full bg-blue-600/10 hover:bg-blue-600/20 text-blue-400 border border-blue-500/30 text-xs font-semibold py-2 rounded-lg cursor-pointer transition-all"
                     >
-                      Analyze Shock with AI
+                      {t("simulator.buttonAnalyze")}
                     </Button>
                   )}
                 </div>

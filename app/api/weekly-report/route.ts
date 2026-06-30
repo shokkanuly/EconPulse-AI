@@ -3,18 +3,21 @@ import { getGeminiClient } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
-    const { country, indicators, parentMode, userProfile } = await req.json();
+    const { country, indicators, parentMode, userProfile, language } = await req.json();
     const client = getGeminiClient();
 
     const indicatorSummary = Array.isArray(indicators)
       ? indicators.map((ind: any) => `- ${ind.title}: ${ind.currentValue}${ind.unit} (Trend: ${ind.trend})`).join('\n')
       : 'No current indicators';
 
+    const langName = language === 'kk' ? 'Kazakh' : language === 'ru' ? 'Russian' : 'English';
     const prompt = `You are EconPulse AI — a financial journalist writing a weekly economic digest.
 A user in ${country === 'KAZ' ? 'Kazakhstan' : country} wants to know:
 1. What happened in the macroeconomy this week?
 2. How does it directly affect their budget?
 3. What is one actionable thing they should do right now?
+
+You MUST write all values in the JSON response in ${langName}.
 
 USER PROFILE DETAILS (for personalization):
 - Name: ${userProfile?.name || 'Guest'}
@@ -44,9 +47,46 @@ Ensure all advice is highly actionable, clear, and avoids complex jargon. Person
     if (!client) {
       // Mock fallback
       await new Promise(resolve => setTimeout(resolve, 1000));
+      const infVal = indicators.find((i: any) => i.id === 'inflation')?.currentValue ?? '8.4';
+      const intVal = indicators.find((i: any) => i.id === 'interest')?.currentValue ?? '14.75';
+
+      if (language === 'kk') {
+        return NextResponse.json({
+          title: country === 'KAZ' ? 'Қазақстанның апталық импульсі: теңге жинақтары және бюджет буферлері' : 'Апталық EconPulse есебі',
+          marketPulse: `Инфляция ${infVal}% және базалық пайыздық мөлшерлеме ${intVal}% деңгейінде болғандықтан, экономика күрделі тепе-теңдікте тұр.`,
+          groceryImpact: parentMode 
+            ? "Азық-түлік, сүт, нан және коммуналдық қызметтер бағасы жоғары деңгейде қалып, отбасылық бюджетті қысуда."
+            : "Күнделікті кофе немесе дәмхана шығындары өсуде. Үнемдеу үшін жеңіл тағамдарды өзіңізбен бірге алып жүруді ойластырыңыз.",
+          creditImpact: parentMode
+            ? "Ипотека мен автонесиелер қымбат күйде қалуда. Базалық мөлшерлеме төмендемейінше жаңа несиелер алмаған жөн."
+            : "Қазіргі уақытта жаңа бөліп төлеу (рассрочка) немесе несие картасын алу қымбатқа түседі. Қолма-қол ақшамен төлеуге тырысыңыз.",
+          savingsAdvice: "Жоғары пайыздық мөлшерлемелерді пайдалану үшін кез келген артық жинақты теңгелік банктік депозиттерде сақтаңыз.",
+          actionItem: parentMode
+            ? "Тоңазытқышқа аудит жасаңыз: осы аптада азық-түлікке 15 000 теңгеге дейін үнемдеу үшін бар тағамдардан мәзір жоспарлаңыз."
+            : "Жазылымдарыңызды қарап шығыңыз және инфляцияны өтеу үшін қолданылмайтын бір платформадан бас тартыңыз."
+        });
+      }
+
+      if (language === 'ru') {
+        return NextResponse.json({
+          title: country === 'KAZ' ? 'Еженедельный пульс Казахстана: доходность тенге и буферы расходов' : 'Еженедельный отчет EconPulse',
+          marketPulse: `При инфляции на уровне ${infVal}% и процентной ставке ${intVal}% экономика находится в фазе жесткого балансирования.`,
+          groceryImpact: parentMode 
+            ? "Цены на продукты, молоко, хлеб и коммунальные услуги остаются повышенными, сокращая бюджет домохозяйств."
+            : "Ваши расходы на кофе и обеды в кафе растут. Попробуйте брать перекусы с собой для экономии.",
+          creditImpact: parentMode
+            ? "Ипотечные и автокредиты остаются дорогими. Избегайте новых долгов до снижения базовой ставки."
+            : "Оформление рассрочки или кредитных карт сейчас обходится дорого. Старайтесь платить наличными или дебетовой картой.",
+          savingsAdvice: "Размещайте временно свободные средства на тенговых депозитах, чтобы извлечь выгоду из высоких ставок.",
+          actionItem: parentMode
+            ? "Проведите ревизию холодильника: планируйте меню на основе имеющихся продуктов, чтобы сэкономить до 15 000 ₸ на этой неделе."
+            : "Проверьте свои подписки и отмените одну неиспользуемую платформу, чтобы компенсировать рост инфляции."
+        });
+      }
+
       return NextResponse.json({
         title: country === 'KAZ' ? 'Kazakhstan Weekly Pulse: Tenge Yields & Spending Buffers' : 'Weekly EconPulse Digest',
-        marketPulse: `With inflation at ${indicators.find((i: any) => i.id === 'inflation')?.currentValue ?? '8.4'}% and interest rates at ${indicators.find((i: any) => i.id === 'interest')?.currentValue ?? '14.75'}%, the economy remains in a tight balancing act.`,
+        marketPulse: `With inflation at ${infVal}% and interest rates at ${intVal}%, the economy remains in a tight balancing act.`,
         groceryImpact: parentMode 
           ? "Grocery bills for milk, meat, and utilities remain elevated, squeezing household budgets."
           : "Your daily coffee or cafe lunch costs are creeping up. Consider packing a snack to save.",

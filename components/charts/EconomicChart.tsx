@@ -53,15 +53,15 @@ export function EconomicChart({
   const renderChart = () => {
     const commonProps = {
       data,
-      margin: { top: 10, right: 10, left: -20, bottom: 0 },
+      margin: { top: 10, right: 10, left: -25, bottom: 0 },
     };
     switch (type) {
       case "line":
         return (
           <LineChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
-            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#cbd5e1' }} dy={10} />
-            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#cbd5e1' }} tickFormatter={(v) => `${v}${unit}`} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} dy={10} />
+            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} tickFormatter={(v) => `${v}${unit}`} />
             <Tooltip content={<CustomTooltip />} />
             <Line type="monotone" dataKey="value" stroke={color} strokeWidth={3} dot={{ r: 3, fill: color, strokeWidth: 2, stroke: '#0f172a' }} activeDot={{ r: 6 }} />
           </LineChart>
@@ -69,9 +69,9 @@ export function EconomicChart({
       case "bar":
         return (
           <BarChart {...commonProps}>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
-            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#cbd5e1' }} dy={10} />
-            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#cbd5e1' }} tickFormatter={(v) => `${v}${unit}`} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} dy={10} />
+            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} tickFormatter={(v) => `${v}${unit}`} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
             <Bar dataKey="value" fill={color} radius={[4, 4, 0, 0]} />
           </BarChart>
@@ -86,9 +86,9 @@ export function EconomicChart({
                 <stop offset="95%" stopColor={color} stopOpacity={0} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.1)" />
-            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#cbd5e1' }} dy={10} />
-            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 11, fill: '#cbd5e1' }} tickFormatter={(v) => `${v}${unit}`} />
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255, 255, 255, 0.05)" />
+            <XAxis dataKey="date" tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} dy={10} />
+            <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 10, fill: '#cbd5e1' }} tickFormatter={(v) => `${v}${unit}`} />
             <Tooltip content={<CustomTooltip />} />
             <Area type="monotone" dataKey="value" stroke={color} strokeWidth={3} fillOpacity={1} fill={`url(#color-${title.replace(/\s+/g, '')})`} />
           </AreaChart>

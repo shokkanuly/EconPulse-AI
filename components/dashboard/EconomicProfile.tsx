@@ -10,6 +10,8 @@ import { Sparkles, User, Briefcase, HelpCircle, Check, Loader2, ArrowRight, Book
 import { EconomicIndicator } from "@/lib/api/mockData";
 import { KAZAKHSTAN_CITIES } from "@/lib/api/kazakhstanData";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "@/lib/LanguageContext";
+import { translateCity } from "@/lib/translations";
 
 interface EconomicProfileProps {
   indicators: EconomicIndicator[];
@@ -29,6 +31,7 @@ const INTERESTS_LIST = [
 ];
 
 export function EconomicProfile({ indicators, country, parentMode, userProfile, onUpdateProfile }: EconomicProfileProps) {
+  const { t, language } = useTranslation();
   const [age, setAge] = useState<string>("18");
   const [city, setCity] = useState<string>("almaty");
   const [income, setIncome] = useState<string>("80000");
@@ -120,7 +123,8 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
           context,
           indicators,
           country,
-          parentMode
+          parentMode,
+          language
         }),
       });
 
@@ -154,18 +158,18 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
           <CardHeader>
             <CardTitle className="text-xl flex items-center gap-2 text-blue-400">
               <User className="w-5 h-5" />
-              Build Your Profile
+              {t("profile.title")}
             </CardTitle>
             <CardDescription>
               {parentMode 
-                ? "Describe your family setup to get a custom household budget guide."
-                : "Fill out your details to get a personalized economic roadmap from our AI adviser."}
+                ? t("profile.descFamily")
+                : t("profile.desc")}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             {/* Age */}
             <div className="space-y-2">
-              <Label htmlFor="age">{parentMode ? "Target Age for Advice (e.g. your kid's age)" : "Your Age"}</Label>
+              <Label htmlFor="age">{parentMode ? t("profile.labelAgeFamily") : t("profile.labelAge")}</Label>
               <Input
                 id="age"
                 type="number"
@@ -173,21 +177,21 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
                 max="99"
                 value={age}
                 onChange={(e) => setAge(e.target.value)}
-                className="bg-muted/40 border-border/60"
+                className="bg-muted/40 border-border/60 text-sm"
               />
             </div>
 
             {/* City */}
             <div className="space-y-2">
-              <Label htmlFor="city">City in Kazakhstan</Label>
+              <Label htmlFor="city">{t("profile.labelCity")}</Label>
               <Select value={city} onValueChange={(val) => { if (val) setCity(val); }}>
-                <SelectTrigger className="bg-muted/40 border-border/60">
+                <SelectTrigger className="bg-muted/40 border-border/60 text-sm">
                   <SelectValue placeholder="Select City" />
                 </SelectTrigger>
                 <SelectContent>
                   {KAZAKHSTAN_CITIES.map((c) => (
                     <SelectItem key={c.id} value={c.id}>
-                      {c.name}
+                      {translateCity(c.id, language)}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -196,14 +200,14 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
 
             {/* Income */}
             <div className="space-y-2">
-              <Label htmlFor="income">{parentMode ? "Average Family Income (KZT/month)" : "Your Monthly Income / Allowance (KZT)"}</Label>
+              <Label htmlFor="income">{parentMode ? t("profile.labelIncomeFamily") : t("profile.labelIncome")}</Label>
               <div className="relative">
                 <Input
                   id="income"
                   type="number"
                   value={income}
                   onChange={(e) => setIncome(e.target.value)}
-                  className="bg-muted/40 border-border/60 pl-4 pr-12"
+                  className="bg-muted/40 border-border/60 pl-4 pr-12 text-sm"
                 />
                 <span className="absolute right-3 top-2 text-xs font-semibold text-muted-foreground">KZT</span>
               </div>
@@ -211,7 +215,7 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
 
             {/* Interests */}
             <div className="space-y-2.5">
-              <Label>Financial Goals & Interests</Label>
+              <Label>{t("profile.labelGoals")}</Label>
               <div className="grid grid-cols-1 gap-2">
                 {INTERESTS_LIST.map((item) => {
                   const isSelected = selectedInterests.includes(item.id);
@@ -219,13 +223,13 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
                     <button
                       key={item.id}
                       onClick={() => handleInterestToggle(item.id)}
-                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-left text-sm transition-all ${
+                      className={`flex items-center justify-between px-3 py-2.5 rounded-xl border text-left text-xs sm:text-sm transition-all cursor-pointer ${
                         isSelected
                           ? "bg-blue-600/10 border-blue-500/50 text-blue-300 font-medium"
                           : "bg-muted/20 border-border/40 hover:bg-muted/40 text-muted-foreground hover:text-foreground"
                       }`}
                     >
-                      <span>{item.label}</span>
+                      <span>{t("profile.goals." + item.id)}</span>
                       {isSelected && <Check className="w-4 h-4 text-blue-400" />}
                     </button>
                   );
@@ -236,14 +240,14 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
             {/* Context Board */}
             <div className="space-y-2">
               <Label htmlFor="profile-context">
-                {parentMode ? "Context Board (Family situation details)" : "Context Board (Write your specific details)"}
+                {parentMode ? t("profile.labelContextFamily") : t("profile.labelContext")}
               </Label>
               <textarea
                 id="profile-context"
                 rows={3}
                 placeholder={parentMode 
-                  ? "e.g. We have a family of 4, two kids. We want to save for kids' university and manage groceries under inflation."
-                  : "e.g. I am a student living in Astana Hub, hoping to apply for a scholarship in Europe next year and buy a laptop."}
+                  ? t("profile.placeholderContextFamily")
+                  : t("profile.placeholderContext")}
                 value={context}
                 onChange={(e) => {
                   setContext(e.target.value);
@@ -256,17 +260,17 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
             <Button
               onClick={getAdvice}
               disabled={loading || selectedInterests.length === 0}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 rounded-xl transition-all shadow-lg shadow-blue-600/20"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-6 rounded-xl transition-all shadow-lg shadow-blue-600/20 cursor-pointer"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  Generating Roadmap...
+                  {t("profile.statusGenerating")}
                 </>
               ) : (
                 <>
                   <Sparkles className="w-4 h-4 mr-2" />
-                  Generate AI Economic Roadmap
+                  {t("profile.buttonGenerate")}
                 </>
               )}
             </Button>
@@ -292,7 +296,7 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2 text-blue-300 font-bold">
                     <BookOpen className="w-5 h-5 text-blue-400" />
-                    Personal Economic Outlook
+                    {t("profile.titleOutlook")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground leading-relaxed text-sm">
@@ -305,9 +309,9 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2 text-emerald-400 font-bold">
                     <PiggyBank className="w-5 h-5" />
-                    Your Personal Action Plan
+                    {t("profile.titleActionPlan")}
                   </CardTitle>
-                  <CardDescription>Targeted actions for the current economic state</CardDescription>
+                  <CardDescription>{t("profile.descActionPlan")}</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {advice.actionPlan && advice.actionPlan.map((action: string, i: number) => (
@@ -321,7 +325,7 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
                       <div className="w-6 h-6 shrink-0 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center font-bold text-xs text-emerald-400 mt-0.5">
                         {i + 1}
                       </div>
-                      <p className="text-sm text-muted-foreground leading-relaxed">{action}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">{action}</p>
                     </motion.div>
                   ))}
                 </CardContent>
@@ -332,7 +336,7 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2 text-red-400 font-bold">
                     <ShieldCheck className="w-5 h-5" />
-                    Inflation Defense Strategy
+                    {t("profile.titleDefense")}
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="text-muted-foreground leading-relaxed text-sm">
@@ -350,9 +354,9 @@ export function EconomicProfile({ indicators, country, parentMode, userProfile, 
               <div className="w-12 h-12 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center mb-4 text-blue-400">
                 <Sparkles className="w-6 h-6 animate-pulse" />
               </div>
-              <h3 className="font-semibold text-lg mb-1">Your economic advisor is waiting</h3>
+              <h3 className="font-semibold text-lg mb-1">{t("profile.placeholderTitle")}</h3>
               <p className="text-sm text-muted-foreground max-w-sm">
-                Fill out the questionnaire and generate your tailored roadmap. Discover how inflation, interest rates, and city costs affect your future savings.
+                {t("profile.placeholderDesc")}
               </p>
             </motion.div>
           )}

@@ -9,19 +9,22 @@ import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
 import { Sparkles, TrendingDown, TrendingUp, Calculator } from "lucide-react";
 import { EconomicIndicator } from "@/lib/api/mockData";
+import { useTranslation } from "@/lib/LanguageContext";
 
 interface SimulatorProps {
   indicators: EconomicIndicator[];
 }
 
 export function Simulator({ indicators }: SimulatorProps) {
+  const { t } = useTranslation();
+
   // What-If State
   const [inflationDelta, setInflationDelta] = useState([0]);
   const [interestDelta, setInterestDelta] = useState([0]);
 
   // Personal State
-  const [income, setIncome] = useState("5000");
-  const [expenses, setExpenses] = useState("3500");
+  const [income, setIncome] = useState("350000");
+  const [expenses, setExpenses] = useState("250000");
   const [impactResult, setImpactResult] = useState<any>(null);
   const [loading, setLoading] = useState(false);
 
@@ -54,7 +57,6 @@ export function Simulator({ indicators }: SimulatorProps) {
       
       const newInflation = currentInflation + inflationDelta[0];
       
-      // Advanced heuristic logic
       // Assuming 60% of expenses are goods/services affected by inflation
       const variableExpenses = expensesNum * 0.6;
       // Assuming 40% of expenses are debt service (mortgage, loans)
@@ -79,28 +81,28 @@ export function Simulator({ indicators }: SimulatorProps) {
   };
 
   return (
-    <Card className="w-full mt-8 bg-card/50 backdrop-blur-xl border-border/50">
+    <Card className="w-full mt-8 bg-card/50 backdrop-blur-xl border-border/50 shadow-xl">
       <CardHeader>
-        <CardTitle className="text-2xl flex items-center gap-2">
+        <CardTitle className="text-xl sm:text-2xl flex items-center gap-2">
           <Calculator className="w-6 h-6 text-blue-500" />
-          Interactive Economics Lab
+          {t("lab.title")}
         </CardTitle>
-        <CardDescription>
-          Adjust macroeconomic factors and see the direct impact on your personal finances.
+        <CardDescription className="text-xs sm:text-sm">
+          {t("lab.desc")}
         </CardDescription>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="what-if" className="w-full">
           <TabsList className="grid w-full grid-cols-2 mb-6">
-            <TabsTrigger value="what-if">What-If Simulator</TabsTrigger>
-            <TabsTrigger value="personal">Personal Impact</TabsTrigger>
+            <TabsTrigger value="what-if" className="cursor-pointer">{t("lab.tabWhatIf")}</TabsTrigger>
+            <TabsTrigger value="personal" className="cursor-pointer">{t("lab.tabPersonal")}</TabsTrigger>
           </TabsList>
           
           <TabsContent value="what-if" className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <Label className="text-base">Inflation Rate adjustment</Label>
+                  <Label className="text-sm sm:text-base">{t("lab.labelInflationAdj")}</Label>
                   <span className="font-mono text-sm text-muted-foreground">
                     {inflationDelta[0] > 0 ? '+' : ''}{inflationDelta[0]}%
                   </span>
@@ -110,13 +112,13 @@ export function Simulator({ indicators }: SimulatorProps) {
                   value={inflationDelta} onValueChange={(val) => setInflationDelta(Array.isArray(val) ? [...val] : [val])} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  Simulated Inflation: <span className="text-foreground font-semibold">{(currentInflation + inflationDelta[0]).toFixed(1)}%</span> (Current: {currentInflation}%)
+                  {t("lab.simulatedInflation")}: <span className="text-foreground font-semibold">{(currentInflation + inflationDelta[0]).toFixed(1)}%</span> (Current: {currentInflation}%)
                 </p>
               </div>
 
               <div className="space-y-4">
                 <div className="flex justify-between">
-                  <Label className="text-base">Interest Rate adjustment</Label>
+                  <Label className="text-sm sm:text-base">{t("lab.labelInterestAdj")}</Label>
                   <span className="font-mono text-sm text-muted-foreground">
                     {interestDelta[0] > 0 ? '+' : ''}{interestDelta[0]}%
                   </span>
@@ -126,7 +128,7 @@ export function Simulator({ indicators }: SimulatorProps) {
                   value={interestDelta} onValueChange={(val) => setInterestDelta(Array.isArray(val) ? [...val] : [val])} 
                 />
                 <p className="text-xs text-muted-foreground">
-                  Simulated Interest: <span className="text-foreground font-semibold">{(currentInterest + interestDelta[0]).toFixed(2)}%</span> (Current: {currentInterest}%)
+                  {t("lab.simulatedInterest")}: <span className="text-foreground font-semibold">{(currentInterest + interestDelta[0]).toFixed(2)}%</span> (Current: {currentInterest}%)
                 </p>
               </div>
             </div>
@@ -136,46 +138,46 @@ export function Simulator({ indicators }: SimulatorProps) {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-4">
                 <div className="space-y-2">
-                  <Label>Monthly Income ($)</Label>
-                  <Input type="number" value={income} onChange={(e) => setIncome(e.target.value)} />
+                  <Label>{t("lab.labelIncome")}</Label>
+                  <Input type="number" value={income} onChange={(e) => setIncome(e.target.value)} className="bg-muted/40 border-border/60 text-sm" />
                 </div>
                 <div className="space-y-2">
-                  <Label>Monthly Expenses ($)</Label>
-                  <Input type="number" value={expenses} onChange={(e) => setExpenses(e.target.value)} />
+                  <Label>{t("lab.labelExpenses")}</Label>
+                  <Input type="number" value={expenses} onChange={(e) => setExpenses(e.target.value)} className="bg-muted/40 border-border/60 text-sm" />
                 </div>
-                <Button onClick={calculateImpact} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white">
+                <Button onClick={calculateImpact} disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700 text-white cursor-pointer py-5 rounded-xl font-medium">
                   {loading ? (
-                    <span className="animate-pulse flex items-center gap-2"><Sparkles className="w-4 h-4" /> Calculating AI Impact...</span>
+                    <span className="animate-pulse flex items-center gap-2"><Sparkles className="w-4 h-4" /> {t("lab.statusCalculating")}</span>
                   ) : (
-                    "Calculate Personal Impact"
+                    t("lab.buttonCalculate")
                   )}
                 </Button>
               </div>
 
               {impactResult && (
                 <div className="bg-muted/30 p-6 rounded-xl border border-border/50 flex flex-col justify-center space-y-4">
-                  <h3 className="font-semibold flex items-center gap-2">
+                  <h3 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
                     <Sparkles className="w-4 h-4 text-blue-500" />
-                    Your Financial Forecast
+                    {t("lab.titleForecast")}
                   </h3>
                   
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Extra Monthly Costs</span>
-                    <span className="text-lg font-bold text-red-500 flex items-center gap-1">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="text-muted-foreground">{t("lab.labelExtraCosts")}</span>
+                    <span className="text-sm sm:text-lg font-bold text-red-500 flex items-center gap-1">
                       <TrendingUp className="w-4 h-4" />
-                      +${impactResult.expenseChange.toFixed(2)}
+                      +{Math.round(impactResult.expenseChange).toLocaleString()} ₸
                     </span>
                   </div>
                   
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">New Monthly Savings</span>
-                    <span className={`text-lg font-bold ${impactResult.newSavings > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                      ${impactResult.newSavings.toFixed(2)}
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <span className="text-muted-foreground">{t("lab.labelNewSavings")}</span>
+                    <span className={`text-sm sm:text-lg font-bold ${impactResult.newSavings > 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                      {Math.round(impactResult.newSavings).toLocaleString()} ₸
                     </span>
                   </div>
 
-                  <p className="text-xs text-muted-foreground pt-4 border-t border-border/50">
-                    Based on simulated inflation ({(currentInflation + inflationDelta[0]).toFixed(1)}%) and interest rates ({(currentInterest + interestDelta[0]).toFixed(2)}%).
+                  <p className="text-[10px] sm:text-xs text-muted-foreground pt-4 border-t border-border/50">
+                    {t("lab.textBasedOn")}: {(currentInflation + inflationDelta[0]).toFixed(1)}% & {(currentInterest + interestDelta[0]).toFixed(2)}%.
                   </p>
                 </div>
               )}

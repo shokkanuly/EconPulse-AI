@@ -3,11 +3,14 @@ import { getGeminiClient } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
-    const { profession, salary, period, inflation, context, country, parentMode } = await req.json();
+    const { profession, salary, period, inflation, context, country, parentMode, language } = await req.json();
     const client = getGeminiClient();
 
+    const langName = language === 'kk' ? 'Kazakh' : language === 'ru' ? 'Russian' : 'English';
     const prompt = `You are EconPulse AI — an expert salary and career negotiator.
 A user has asked for a 5-10 year salary forecast and career advice under current macroeconomic conditions.
+
+You MUST write all values in the JSON response in ${langName}.
 
 USER CAREER DETAILS:
 - Profession: ${profession}
@@ -35,6 +38,31 @@ Ensure all advice is highly actionable, warm, and clear. If Parent Mode is activ
       // Mock fallback
       await new Promise(resolve => setTimeout(resolve, 1000));
       const powerAfterPeriod = salary * Math.pow(1 - inflation / 100, period);
+      
+      if (language === 'kk') {
+        return NextResponse.json({
+          careerOutlook: `${country} елінде ${profession} мамандығының болашағы тұрақты. Сандық трансформация және жергілікті нарықтың өзгеруі білікті мамандарға деген сұранысты арттыруда.`,
+          purchasingPowerWarning: `${inflation}% инфляция жағдайында сіздің қазіргі ${salary} теңге жалақыңыз сатып алу қабілетін жоғалтады. ${period} жылдан кейін бұл бүгінгі ${Math.round(powerAfterPeriod)} теңге сияқты сезіледі. Сондықтан жалақыны жыл сайын көтеру маңызды.`,
+          negotiationTips: [
+            `Жыл сайын кем дегенде ${inflation}% инфляция деңгейіне сәйкес келетін өнімділікке негізделген жалақыны қарауды сұраңыз.`,
+            `Нарықта ерекшелену үшін салалық сертификаттарды немесе техникалық дағдыларды дамытыңыз.`,
+            `Жалақыны қарау кезінде тек инфляцияны ғана емес, компания табысына қосқан нақты үлесіңізді атап көрсетіңіз.`
+          ]
+        });
+      }
+      
+      if (language === 'ru') {
+        return NextResponse.json({
+          careerOutlook: `Перспективы для профессии «${profession}» в ${country} остаются стабильными. Цифровая трансформация и развитие рынка продолжают стимулировать спрос на квалифицированных специалистов.`,
+          purchasingPowerWarning: `При инфляции в ${inflation}% ваша текущая зарплата в ${salary} тенге потеряет значительную покупательную способность. Через ${period} лет она будет эквивалентна ${Math.round(powerAfterPeriod)} тенге сегодня. Вам необходимы регулярные ежегодные прибавки для сохранения уровня жизни.`,
+          negotiationTips: [
+            `Запрашивайте ежегодный пересмотр оклада с привязкой к уровню инфляции в ${inflation}%.`,
+            `Развивайте смежные компетенции и получайте профильные сертификаты, чтобы повысить свою ценность на рынке труда.`,
+            `Подкрепляйте запрос на повышение конкретными результатами вашей работы и ростом ключевых показателей компании.`
+          ]
+        });
+      }
+
       return NextResponse.json({
         careerOutlook: `The outlook for ${profession} in ${country} remains steady. Digital transformation and local market shifts continue to drive demand for skilled specialists.`,
         purchasingPowerWarning: `With ${inflation}% inflation, your current salary of ${salary} KZT will lose significant purchasing power. In ${period} years, it will feel like earning only ${Math.round(powerAfterPeriod)} KZT today. You must secure annual raises just to stay even.`,

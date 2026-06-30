@@ -3,7 +3,7 @@ import { getGeminiClient } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
-    const { messages, contextData, country, parentMode } = await req.json();
+    const { messages, contextData, country, parentMode, language } = await req.json();
 
     const client = getGeminiClient();
 
@@ -15,7 +15,10 @@ export async function POST(req: Request) {
         }).join('\n')
       : JSON.stringify(contextData, null, 2);
 
+    const langName = language === 'kk' ? 'Kazakh' : language === 'ru' ? 'Russian' : 'English';
     const systemInstruction = `You are EconPulse AI — an expert macroeconomic analyst. You are currently analyzing ${country ?? 'the selected country'}.
+    
+    You MUST respond in ${langName}. Do not respond in other languages. If writing in Kazakh or Russian, keep the tone appropriate and translate financial concepts correctly.
     
 LIVE DASHBOARD DATA (as of now):
 ${indicatorSummary}
@@ -44,6 +47,28 @@ INSTRUCTIONS:
       const cpi = contextData?.find?.((i: any) => i.id === 'inflation')?.currentValue ?? 'N/A';
       const gdp = contextData?.find?.((i: any) => i.id === 'gdp')?.currentValue ?? 'N/A';
       
+      if (language === 'kk') {
+        if (parentMode) {
+          return NextResponse.json({
+            message: `[Имитациялық режим — тікелей ИИ үшін GEMINI_API_KEY қосыңыз]\n\n${country ?? 'Таңдалған ел'} үшін ағымдағы отбасылық бюджет тақтасына негізделген:\n\n• Азық-түлік құны (Тұтыну бағаларының инфляциясы): ${typeof cpi === 'number' ? cpi.toFixed(2) + '%' : cpi}\n• Жұмыс сенімділігі (ЖІӨ өсуі): ${typeof gdp === 'number' ? gdp.toFixed(2) + '%' : gdp}\n\nБұл көрсеткіштер үй шаруашылығының шығындары өсіп жатқанын көрсетеді. Отбасылар азық-түлік шығындарын қайта қарауы керек және банктік несиелерден бас тарта тұрғаны жөн.`
+          });
+        }
+        return NextResponse.json({
+          message: `[Имитациялық режим — тікелей ИИ үшін GEMINI_API_KEY қосыңыз]\n\n${country ?? 'Таңдалған ел'} үшін ағымдағы экономикалық мәліметтерге негізделген:\n\n• CPI инфляциясы: ${typeof cpi === 'number' ? cpi.toFixed(2) + '%' : cpi}\n• ЖІӨ өсімі: ${typeof gdp === 'number' ? gdp.toFixed(2) + '%' : gdp}\n\nБұл көрсеткіштер инфляцияның ${typeof cpi === 'number' && cpi > 4 ? 'жоғары' : 'қалыпты'} екенін көрсетеді. Жоғары инфляция сатып алу қабілетін төмендетеді.`
+        });
+      }
+      
+      if (language === 'ru') {
+        if (parentMode) {
+          return NextResponse.json({
+            message: `[Имитационный режим — добавьте GEMINI_API_KEY для работы ИИ]\n\nНа основе текущей панели семейного бюджета для ${country ?? 'выбранной страны'}:\n\n• Стоимость продуктов (Инфляция CPI): ${typeof cpi === 'number' ? cpi.toFixed(2) + '%' : cpi}\n• Надежность работы (Рост ВВП): ${typeof gdp === 'number' ? gdp.toFixed(2) + '%' : gdp}\n\nЭти показатели указывают на рост расходов. Семьям рекомендуется оптимизировать траты на продукты и временно воздержаться от новых кредитов.`
+          });
+        }
+        return NextResponse.json({
+          message: `[Имитационный режим — добавьте GEMINI_API_KEY для работы ИИ]\n\nНа основе текущих данных для ${country ?? 'выбранной страны'}:\n\n• Инфляция CPI: ${typeof cpi === 'number' ? cpi.toFixed(2) + '%' : cpi}\n• Рост ВВП: ${typeof gdp === 'number' ? gdp.toFixed(2) + '%' : gdp}\n\nЭти показатели указывают на ${typeof cpi === 'number' && cpi > 4 ? 'высокую' : 'умеренную'} инфляционную среду. Высокая инфляция снижает покупательную способность.`
+        });
+      }
+
       if (parentMode) {
         return NextResponse.json({
           message: `[Mock Mode — add GEMINI_API_KEY for live AI]\n\nBased on the current family budget dashboard for ${country ?? 'the selected country'}:\n\n• Cost of Groceries (CPI Inflation): ${typeof cpi === 'number' ? cpi.toFixed(2) + '%' : cpi}\n• Job Security (GDP Growth): ${typeof gdp === 'number' ? gdp.toFixed(2) + '%' : gdp}\n\nThese indicators suggest that household expenses are rising. Families should review daily purchases for groceries and delay non-essential bank loans to maintain a healthy budget.`

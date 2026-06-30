@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +5,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Send, Bot, Sparkles, X, Database } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRIES } from "@/lib/api/mockData";
+import { useTranslation } from "@/lib/LanguageContext";
 
 type Message = {
   role: "user" | "ai";
@@ -21,8 +20,16 @@ const QUICK_PROMPTS = [
 ];
 
 export function AiChat({ contextData, country, parentMode = false }: { contextData: any; country: string; parentMode?: boolean }) {
+  const { t, language } = useTranslation();
   const countryInfo = COUNTRIES.find(c => c.code === country);
-  const countryLabel = countryInfo ? `${countryInfo.flag} ${countryInfo.name}` : country;
+  
+  const countryNameDict: Record<string, Record<string, string>> = {
+    KAZ: { ru: "Казахстан", kk: "Қазақстан", en: "Kazakhstan" },
+    USA: { ru: "США", kk: "АҚШ", en: "United States" },
+    RUS: { ru: "Россия", kk: "Ресей", en: "Russia" },
+  };
+  const countryLocalizedName = countryInfo ? (countryNameDict[countryInfo.code]?.[language] ?? countryInfo.name) : country;
+  const countryLabel = countryInfo ? `${countryInfo.flag} ${countryLocalizedName}` : country;
 
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -34,14 +41,14 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
   const [msgTimestamps, setMsgTimestamps] = useState<number[]>([]);
   const [cooldown, setCooldown] = useState(0);
 
-  // Reset greeting when country or parentMode changes
+  // Reset greeting when country or parentMode or language changes
   useEffect(() => {
     const greeting = parentMode
-      ? `Hello! I'm your Family Finance Adviser, loaded with live economic data for **${countryLabel}**.\n\nI can explain how inflation affects your grocery budget, utility bills, mortgage, or children's education in simple, plain language.`
-      : `Hello! I'm your AI Economic Analyst, loaded with live dashboard data for **${countryLabel}**.\n\nI can see all indicators on your dashboard — inflation, unemployment, GDP, and interest rates. Ask me how these numbers affect your studies, first jobs, or savings!`;
+      ? t("chat.welcomeFamily", { country: countryLabel })
+      : t("chat.welcomeAnalyst", { country: countryLabel });
 
     setMessages([{ role: "ai", content: greeting }]);
-  }, [country, countryLabel, parentMode]);
+  }, [country, countryLabel, parentMode, language, t]);
 
   useEffect(() => {
     setTimeout(() => {
@@ -84,7 +91,7 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: newMessages, contextData, country, parentMode }),
+        body: JSON.stringify({ messages: newMessages, contextData, country, parentMode, language }),
       });
 
       if (!response.ok) {
@@ -137,6 +144,14 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
     }
   };
 
+  // Localized quick prompts list
+  const quickPromptsList = [
+    t("chat.quickPrompts.0") || QUICK_PROMPTS[0],
+    t("chat.quickPrompts.1") || QUICK_PROMPTS[1],
+    t("chat.quickPrompts.2") || QUICK_PROMPTS[2],
+    t("chat.quickPrompts.3") || QUICK_PROMPTS[3],
+  ];
+
   return (
     <>
       {/* FAB */}
@@ -147,10 +162,10 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setIsOpen(true)}
-            className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/30 flex items-center justify-center z-40 transition-colors"
+            className="fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-500 text-white rounded-full shadow-lg shadow-blue-900/30 flex items-center justify-center z-40 transition-colors cursor-pointer"
             style={{ boxShadow: "0 0 20px rgba(59,130,246,0.4)" }}
           >
-            <Sparkles className="w-6 h-6" />
+            <Sparkles className="w-6 h-6 animate-pulse" />
           </motion.button>
         )}
       </AnimatePresence>
@@ -170,7 +185,7 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 font-semibold text-blue-400">
                   <Bot className="w-5 h-5" />
-                  <span>AI Economic Analyst</span>
+                  <span>{parentMode ? t("chat.familyTitle") : t("chat.analystTitle")}</span>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => setIsOpen(false)} className="rounded-full -mr-1">
                   <X className="w-4 h-4" />
@@ -178,12 +193,12 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
               </div>
               <div className="flex items-center gap-1.5 mt-1.5">
                 <Database className="w-3 h-3 text-muted-foreground" />
-                <span className="text-xs text-muted-foreground">
-                  Live data: FRED · World Bank · OECD · BLS · Trading Economics
+                <span className="text-[10px] sm:text-xs text-muted-foreground">
+                  {t("chat.subtitle")}
                 </span>
               </div>
               <div className="text-xs text-blue-400/80 mt-1 font-medium">
-                Analyzing: {countryLabel}
+                {t("historical.legendValue")}: {countryLabel}
               </div>
             </div>
 
@@ -228,12 +243,12 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
             {/* Quick Prompts */}
             <div className="px-4 pb-2 shrink-0">
               <div className="flex flex-wrap gap-1.5">
-                {QUICK_PROMPTS.map((prompt) => (
+                {quickPromptsList.map((prompt) => (
                   <button
                     key={prompt}
                     onClick={() => handleSend(prompt)}
                     disabled={isLoading || cooldown > 0}
-                    className="text-xs px-2.5 py-1 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:border-blue-500/40 hover:bg-blue-500/5 transition-all disabled:opacity-40"
+                    className="text-xs px-2.5 py-1 rounded-full bg-muted/50 border border-border/50 text-muted-foreground hover:text-foreground hover:border-blue-500/40 hover:bg-blue-500/5 transition-all disabled:opacity-40 cursor-pointer"
                   >
                     {prompt}
                   </button>
@@ -249,8 +264,8 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
                   onChange={(e) => setInput(e.target.value)}
                   placeholder={
                     cooldown > 0
-                      ? `Please wait ${cooldown}s...`
-                      : `Ask about ${countryLabel} economy...`
+                      ? t("chat.cooldown", { secs: cooldown })
+                      : t("chat.placeholder", { country: countryLocalizedName })
                   }
                   className="flex-1 bg-muted/50 border-border/50 focus-visible:ring-blue-500 text-sm"
                   disabled={isLoading || cooldown > 0}
@@ -259,7 +274,7 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
                   type="submit"
                   size="icon"
                   disabled={!input.trim() || isLoading || cooldown > 0}
-                  className="bg-blue-600 hover:bg-blue-500 text-white shrink-0 relative"
+                  className="bg-blue-600 hover:bg-blue-500 text-white shrink-0 relative cursor-pointer"
                 >
                   {cooldown > 0 ? (
                     <span className="text-[10px] font-bold">{cooldown}s</span>
@@ -275,3 +290,5 @@ export function AiChat({ contextData, country, parentMode = false }: { contextDa
     </>
   );
 }
+
+

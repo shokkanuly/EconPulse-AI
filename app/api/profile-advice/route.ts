@@ -3,14 +3,17 @@ import { getGeminiClient } from '@/lib/gemini';
 
 export async function POST(req: Request) {
   try {
-    const { age, city, income, interests, context, indicators, country, parentMode } = await req.json();
+    const { age, city, income, interests, context, indicators, country, parentMode, language } = await req.json();
     const client = getGeminiClient();
 
     const indicatorSummary = Array.isArray(indicators)
       ? indicators.map((ind: any) => `- ${ind.title}: ${ind.currentValue}${ind.unit} (Trend: ${ind.trend})`).join('\n')
       : 'No current indicators';
 
+    const langName = language === 'kk' ? 'Kazakh' : language === 'ru' ? 'Russian' : 'English';
     const prompt = `You are EconPulse AI — an expert economic adviser. Give a young person in Kazakhstan / Central Asia personalized, practical financial advice.
+    
+    You MUST write all values in the JSON response in ${langName}.
 
 USER PROFILE:
 - Age: ${age} years old (Target audience is 14–25 years old. Keep tone highly relevant, engaging, and educational)
@@ -40,6 +43,31 @@ Ensure all advice is highly actionable, clear, and avoids complex jargon. If Par
     if (!client) {
       // Mock mode fallback
       await new Promise(resolve => setTimeout(resolve, 1200));
+      
+      if (language === 'kk') {
+        return NextResponse.json({
+          personalOutlook: `Сіз ${city} қаласында тұратын ${age} жастағы адам болғандықтан, ағымдағы экономикалық көрсеткіштер жоғары инфляцияны көрсетеді, бұл ақшаның тез құнсызданатынын білдіреді. Шығындарды басқару өте маңызды.`,
+          actionPlan: [
+            `Қызығушылығыңыз ${interests[0] || 'бюджеттеу'} болғандықтан, шығындарды бақылау үшін мобильді қосымшаны қолданыңыз.`,
+            `${income || 0} теңге табысыңыздан кемінде 10%-ын жоғары мөлшерлемелі теңге депозитіне (14-15%) сақтауға тырысыңыз.`,
+            `Білім мен цифрлық дағдыларға (бағдарламалау, тілдер) инвестиция жасаңыз — бұл инфляцияға қарсы ең жақсы қорғаныс.`
+          ],
+          inflationRiskMitigation: `Қазақстанда инфляция шамамен 8-9% құрайды. Бұл бүгінгі 1000 теңге келесі жылы азырақ сатып алады деген сөз. Ақшаңызды қорғау үшін оны қолма-қол сақтамаңыз — депозитке салыңыз немесе қажетті кітаптар/курстарды баға өспей тұрып сатып алыңыз.`
+        });
+      }
+      
+      if (language === 'ru') {
+        return NextResponse.json({
+          personalOutlook: `Так как вам ${age} лет и вы находитесь в г. ${city}, текущие экономические показатели указывают на высокую инфляцию, что означает быстрое обесценивание денег. Управление расходами является ключевым фактором.`,
+          actionPlan: [
+            `Поскольку вы интересуетесь темой «${interests[0] || 'бюджетирование'}», начните отслеживать расходы с помощью мобильного приложения.`,
+            `Из вашего месячного бюджета в ${income || 0} тенге старайтесь откладывать не менее 10% на депозит в тенге (сейчас ставки до 14-15%).`,
+            `Инвестируйте в свое образование и цифровые навыки (программирование, языки) — это лучший долгосрочный щит от инфляции.`
+          ],
+          inflationRiskMitigation: `Инфляция в Казахстане составляет около 8-9%. Это означает, что 1 000 тенге сегодня купят меньше в следующем году. Чтобы защитить деньги, не держите наличные под матрасом — переведите сбережения на депозиты в тенге или купите важные книги/курсы сейчас.`
+        });
+      }
+
       return NextResponse.json({
         personalOutlook: `Given you are ${age} in ${city}, current economic indicators suggest high inflation which means money loses value fast. For a student or young worker, managing costs is key.`,
         actionPlan: [
